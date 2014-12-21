@@ -28,7 +28,7 @@ def crosscorrelate(left, right, ran):
     :param ran:
     :return:
     """
-    combined_df = pd.concat([left, right], axis=1).fillna(method='bfill').fillna(method='ffill')
+    combined_df = pd.concat([left, right], axis=1, join='inner').fillna(method='bfill').fillna(method='ffill')
     combined_df.columns = ['left', 'right']
     T = len(combined_df.index.date)
     combined_df = combined_df.groupby(combined_df.index.date)
