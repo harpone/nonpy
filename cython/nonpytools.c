@@ -3957,20 +3957,20 @@ static PyObject *__pyx_pf_10nonpytools_2binner(CYTHON_UNUSED PyObject *__pyx_sel
   /* "nonpytools.pyx":189
  * 
  * 
- *     return newhist, new_drifts, new_diffs             # <<<<<<<<<<<<<<
+ *     return new_drifts, new_diffs, newhist             # <<<<<<<<<<<<<<
  */
   __Pyx_XDECREF(__pyx_r);
   __pyx_t_6 = PyTuple_New(3); if (unlikely(!__pyx_t_6)) {__pyx_filename = __pyx_f[0]; __pyx_lineno = 189; __pyx_clineno = __LINE__; goto __pyx_L1_error;}
   __Pyx_GOTREF(__pyx_t_6);
-  __Pyx_INCREF(__pyx_v_newhist);
-  PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_v_newhist);
-  __Pyx_GIVEREF(__pyx_v_newhist);
   __Pyx_INCREF(__pyx_v_new_drifts);
-  PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_v_new_drifts);
+  PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_v_new_drifts);
   __Pyx_GIVEREF(__pyx_v_new_drifts);
   __Pyx_INCREF(__pyx_v_new_diffs);
-  PyTuple_SET_ITEM(__pyx_t_6, 2, __pyx_v_new_diffs);
+  PyTuple_SET_ITEM(__pyx_t_6, 1, __pyx_v_new_diffs);
   __Pyx_GIVEREF(__pyx_v_new_diffs);
+  __Pyx_INCREF(__pyx_v_newhist);
+  PyTuple_SET_ITEM(__pyx_t_6, 2, __pyx_v_newhist);
+  __Pyx_GIVEREF(__pyx_v_newhist);
   __pyx_r = __pyx_t_6;
   __pyx_t_6 = 0;
   goto __pyx_L0;

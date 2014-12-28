@@ -186,4 +186,4 @@ def binner(data, bins):
     new_diffs = np.transpose(new_diffs, new_diff_axes)
 
 
-    return newhist, new_drifts, new_diffs
+    return new_drifts, new_diffs, newhist

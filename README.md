@@ -10,8 +10,9 @@ Pre-alpha stage.
 Currently the only useful functions are the (Cython
 optimized) 'crosscorrelate' function, which does cross-
 correlation (with lag) between two Pandas time series,
-and "binner" which estimates the drift and diffusion
-terms of a (multivariate) diffusion process.
+and 'binner' which estimates the drift and diffusion
+terms of a (multivariate) diffusion process (also
+Cythonized).
 
 The reason I wrote the 'crosscorrelate' function is
 that scipy.crosscorrelate does a full convolution
