@@ -20,7 +20,7 @@ base_dir = 'python2'
 
 ext = '.pyx' if USE_CYTHON else '.c'
 
-extensions = [Extension("nonpytools", ["cython/nonpytools" + ext])]
+extensions = [Extension("nonpytools", ["nonpy/cython/nonpytools" + ext])]
 
 if USE_CYTHON:
     from Cython.Build import cythonize
@@ -33,6 +33,7 @@ setup(
     author='Heikki Arponen',
     author_email='heikki.a.arponen@gmail.com',
     url='',
+    py_modules=['nonpy.nonpy'],
     ext_modules=extensions,
 
     #long_description=open('README.txt').read(),
