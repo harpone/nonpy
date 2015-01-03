@@ -8,6 +8,7 @@ import sys
 
 from distutils.core import setup
 from distutils.extension import Extension
+import nonpy.nonpy
 
 if USE_CYTHON:
     try:
@@ -28,7 +29,7 @@ if USE_CYTHON:
 
 setup(
     name='nonpy',
-    version=0.1,
+    version=nonpy.nonpy.__version__,
     description='Nonparametric time series modeling',
     author='Heikki Arponen',
     author_email='heikki.a.arponen@gmail.com',

@@ -9,13 +9,14 @@ from libc.math cimport sqrt
 from libc.math cimport fabs
 from libc.math cimport pow
 
-ctypedef float     real_t
+#ctypedef float     real_t
+ctypedef np.float64_t dtype_t
 ctypedef uint32_t  uint_t
 ctypedef int32_t   int_t
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def corrfun(np.ndarray[real_t, ndim=1] leftarr, np.ndarray[real_t, ndim=1] rightarr, uint_t ran):
+def corrfun(np.ndarray[dtype_t, ndim=1] leftarr, np.ndarray[dtype_t, ndim=1] rightarr, uint_t ran):
 
     """Helper correlation function. Returns the array defined as
     $$
@@ -32,9 +33,9 @@ def corrfun(np.ndarray[real_t, ndim=1] leftarr, np.ndarray[real_t, ndim=1] right
 
     cdef:
         uint_t size = len(leftarr)
-        np.ndarray[real_t, ndim=1] corr_array = np.asarray(np.zeros(2*ran + 1), dtype = np.float64)
+        np.ndarray[dtype_t, ndim=1] corr_array = np.zeros(2*ran + 1, dtype = np.float64)
         uint_t n, m
-        real_t temp
+        dtype_t temp
 
     #right hand side and zero:
     for n in range(ran + 1):
@@ -58,6 +59,8 @@ def binner(data, bins):
 
     """ Put the dX, (dX - drift)(dX - drift) in bins.
 
+    NOTE: now modified into form X_{t+1} = f(X_t) + g(X_t) xi_t
+
     """
 
     T, dim = data.shape
@@ -73,16 +76,16 @@ def binner(data, bins):
     shiftbins_np = bins[:, 0].flatten()  # shape (dim,)
 
     cdef:
-        np.ndarray[float, ndim=2] data_c = data.astype(np.float32)
-        np.ndarray[float, ndim=1] dbins = dbins_np.astype(np.float32) # shape (1, dim)
-        np.ndarray[float, ndim=1] shiftbins = shiftbins_np.astype(np.float32) # shape (1, dim)
+        np.ndarray[dtype_t, ndim=2] data_c = data.astype(np.float64)
+        np.ndarray[dtype_t, ndim=1] dbins = dbins_np.astype(np.float64) # shape (1, dim)
+        np.ndarray[dtype_t, ndim=1] shiftbins = shiftbins_np.astype(np.float64) # shape (1, dim)
         # Init histogram, drift and diffusion arrays:
         np.npy_intp size_hist = nbins ** dim
         np.npy_intp size_drift = dim * nbins ** dim
         np.npy_intp size_diff = dim * dim * nbins ** dim
         np.ndarray[uint32_t, ndim=1] hist = np.zeros(size_hist, dtype=np.uint32)
-        np.ndarray[float, ndim=1] drifts_unnorm = np.zeros(size_drift, dtype=np.float32)
-        np.ndarray[float, ndim=1] diffs_unnorm = np.zeros(size_diff, dtype=np.float32)
+        np.ndarray[dtype_t, ndim=1] drifts_unnorm = np.zeros(size_drift, dtype=np.float64)
+        np.ndarray[dtype_t, ndim=1] diffs_unnorm = np.zeros(size_diff, dtype=np.float64)
 
         #loop vars etc.
         uint_t t, i, j, drift_location, diff_location
@@ -90,8 +93,8 @@ def binner(data, bins):
         uint_t d = dim
         uint_t T_end = T  # number of samples
         uint_t N = nbins  # number of bins
-        float X_ti, dX_ti, dbin, shiftbin
-        np.ndarray[float, ndim=1] diffvector = np.zeros(d, dtype=np.float32)
+        dtype_t X_ti, dX_ti, dbin, shiftbin
+        np.ndarray[dtype_t, ndim=1] diffvector = np.zeros(d, dtype=np.float64)
 
     # Compute histogram and drift array:
     # NOTE: outside bounds values NOT properly accounted!!
@@ -113,12 +116,13 @@ def binner(data, bins):
             hist[location] += 1
             for i in range(d):
                 drift_location = location + <int>(pow(N, d) * i)
-                drifts_unnorm[drift_location] += data_c[t + 1,i] - data_c[t,i]
+                #drifts_unnorm[drift_location] += data_c[t + 1,i] - data_c[t,i]
+                drifts_unnorm[drift_location] += data_c[t + 1,i]
 
     # drift array for the diffusion array computation:
     stacked_hist = np.tile(hist, dim)
     cdef:
-        np.ndarray[float, ndim=1] drifts = (drifts_unnorm / stacked_hist).astype(np.float32)
+        np.ndarray[dtype_t, ndim=1] drifts = (drifts_unnorm / stacked_hist).astype(np.float64)
 
     # Compute diffusion array:
     for t in range(T_end):
@@ -136,9 +140,10 @@ def binner(data, bins):
         if location > -1:
             location += 1
             for i in range(d):
-                dX_ti = data_c[t + 1,i] - data_c[t,i]
+                #dX_ti = data_c[t + 1,i] - data_c[t,i]
                 drift_location = location + <int>(pow(N, d) * i)
-                diffvector[i] = dX_ti - drifts[drift_location]
+                #diffvector[i] = dX_ti - drifts[drift_location]
+                diffvector[i] = data_c[t + 1,i] - drifts[drift_location]
 
             for i in range(d):
                 for j in range(d):

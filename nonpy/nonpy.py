@@ -13,9 +13,10 @@
 #
 #     You should have received a copy of the GNU General Public License
 #     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from __future__ import print_function, division
 
 __author__ = 'Heikki Arponen'
-version = '0.16'
+__version__ = '0.2'
 
 import pandas as pd
 import numpy as np
@@ -31,43 +32,48 @@ from nonpytools import corrfun, binner
 
 def plotly_3D(bins, z_data, filename='current'):
 
+    import plotly.plotly as py
+    import plotly.tools as tls
+    from plotly.graph_objs import Surface, Data, Layout, Scene
+    from plotly.graph_objs import XAxis, YAxis, ZAxis, Figure
+
     dx = bins[0, 1] - bins[0, 0]
     xcoords = bins[0, :-1] + dx / 2
     dy = bins[1, 1] - bins[1, 0]
     ycoords = bins[1, :-1] + dy / 2
 
-    trace1 = py.Surface(
+    trace1 = Surface(
         z=z_data,
         x=ycoords,  # flip coords!
         y=xcoords
     )
 
     # Package the trace dictionary into a data object
-    data = py.Data([trace1])
+    data = Data([trace1])
 
     # Dictionary of style options for all axes
     axis = dict(
-        showbackground=True, # (!) show axis background
+        showbackground=True,  # (!) show axis background
         backgroundcolor="rgb(204, 204, 204)",  # set background color to grey
         gridcolor="rgb(255, 255, 255)",        # set grid line color
         zerolinecolor="rgb(255, 255, 255)",    # set zero grid line color
     )
 
     # Make a layout object
-    layout = py.Layout(
+    layout = Layout(
         title='Surf', # set plot title
-        scene=py.Scene(  # (!) axes are part of a 'scene' in 3d plots
-            xaxis=py.XAxis(axis),  # set x-axis style
-            yaxis=py.YAxis(axis),  # set y-axis style
-            zaxis=py.ZAxis(axis)   # set z-axis style
+        scene=Scene(  # (!) axes are part of a 'scene' in 3d plots
+            xaxis=XAxis(axis),  # set x-axis style
+            yaxis=YAxis(axis),  # set y-axis style
+            zaxis=ZAxis(axis)   # set z-axis style
         )
     )
 
     # Make a figure object
-    fig = py.Figure(data=data, layout=layout)
+    fig = Figure(data=data, layout=layout)
 
     # (@) Send to Plotly and show in notebook
-    return py.iplot(fig, filename=filename)
+    return py.iplot(fig, filename=filename, world_readable=False)
 
 def standardize(dataframe):
 
@@ -83,30 +89,49 @@ def standardize(dataframe):
 
     return df
 
-def crosscorrelate(left, right, ran):
+def crosscorrelate(left, right, ran, memory_efficient=False):
     """Intraday correlation function between two Pandas time series
-    (e.g. columns of a DataFrame).
+    (e.g. columns of a DataFrame) or DataFrames.
 
     Groups time series data by date, computes the correlation function
     for each date and then computes the mean over dates.
 
-    :param left:
-    :param right:
-    :param ran:
-    :return:
-    """
-    combined_df = pd.concat([left, right], axis=1, join='inner').fillna(method='bfill').fillna(method='ffill')
-    combined_df.columns = ['left', 'right']
-    T = len(combined_df.index.date)
-    combined_df = combined_df.groupby(combined_df.index.date)
-    crosscorr_daily = np.zeros((T, 2 * ran + 1))
+    The correlation is a function f(t) = Corr(left(. + t), right(.)),
+    i.e. the left variable/array is the lagged one.
 
-    n = 0
-    for _, data in combined_df:
-        data = standardize(data)
-        left, right = data['left'].values, data['right'].values
-        crosscorr_daily[n] = corrfun(left, right, ran)
-        n += 1
+    :param left: Pandas TimeSeries or DataFrame
+    :param right: Pandas TimeSeries or DataFrame
+    :param ran: integer specifying the maximum lag
+    :param memory_efficient: Boolean. 'False' uses Pandas groupby
+    while 'True' does a loop over all dates (and is much slower).
+    :return: numpy.array of shape (2 * ran + 1,)
+    """
+    if isinstance(left, pd.TimeSeries):
+        left = pd.DataFrame(left)
+    if isinstance(right, pd.TimeSeries):
+        right = pd.DataFrame(right)
+
+    together = pd.merge(left, right, left_index=True, right_index=True).dropna()
+    together.columns = ['left', 'right']
+    ndays = len(together.index.date)
+    crosscorr_daily = np.zeros((ndays, 2 * ran + 1))  # init crosscorr array
+
+    n = 0  # counter
+    if memory_efficient:
+        dates = np.unique(together.index.date)
+        for date in dates:
+            data = together.ix[str(date)]
+            data = standardize(data)
+            left, right = data['left'].values, data['right'].values
+            crosscorr_daily[n] = corrfun(left, right, ran)
+            n += 1
+    else:
+        together = together.groupby(together.index.date)
+        for _, data in together:
+            data = standardize(data)
+            left, right = data['left'].values, data['right'].values
+            crosscorr_daily[n] = corrfun(left, right, ran)
+            n += 1
 
     crosscorr = np.nanmean(crosscorr_daily, axis=0)
 
@@ -257,7 +282,11 @@ def cholesky_diffusion(diffarr, epsilon=1E-9):
     Sometimes there will be errors resulting in eigenvalues very close to zero
     (positive or negative values). This is dealt with adding a small positive
     term to the diagonal elements, which renders the det > 0.
+
     """
+    #  TODO: do RMT cleaning instead!!
+    #  TODO: check that old_shape is recovered for d > 2
+    #  TODO: test if cleaning gives smoother diffusions
 
     dim = diffarr.shape[0]
     nbins = diffarr.shape[-1]
@@ -266,7 +295,7 @@ def cholesky_diffusion(diffarr, epsilon=1E-9):
     arr = np.copy(diffarr)
     arr = arr.reshape(new_shape)
     cholesky = np.zeros(arr.shape)
-    correction_matrix = np.ones(dim) + np.eye(dim) * epsilon
+    correction_matrix = np.eye(dim) * epsilon
 
     count = 0
     for n in xrange(nbins ** dim):
@@ -276,7 +305,7 @@ def cholesky_diffusion(diffarr, epsilon=1E-9):
             cholesky[..., n] = np.linalg.cholesky(tempmat)
         elif np.linalg.det(tempmat) != 0:
             #print('~0')
-            tempmat = tempmat * correction_matrix
+            tempmat += correction_matrix
             cholesky[..., n] = np.linalg.cholesky(tempmat)
 
     cholesky = cholesky.reshape(old_shape)
@@ -296,12 +325,13 @@ class NonparametricDPE:
         self.cutoff = cutoff
         self.data = self.clean_data(dataframe)
 
-        self.dim = self.data.ndim
+        self.dim = self.data.shape[1]
         self.scale = scale
         self.bin_range = bin_range
         self.means = self.data.mean()
         self.stds = self.data.std()
         #self.dimension = len(self.means)
+        self.counter = 0  # count number of updates
 
         # Get bin array and histogram:
         self.bins = self.get_bins()
@@ -364,13 +394,11 @@ class NonparametricDPE:
             self.unnormalized_arrays = arrays[0:2]
             self.histogram = arrays[2]
             print('Arrays computed.')
-        elif arrays[2] == self.histogram:
-            print('Error: this data has already been added!')
-            raise
         else:
+            self.counter += 1
             self.unnormalized_arrays += arrays[0:2]
             self.histogram += arrays[2]
-            print('Arrays updated.')
+            print('\rArrays updated {} times.'.format(self.counter), end=' ')
         ############# Check these!!!
         normalizer = np.copy(self.histogram)
         normalizer[normalizer == 0.] = 1.
@@ -386,7 +414,7 @@ class NonparametricDPE:
                 for e in xrange(0, dim):
                     diffusions_sqrd[d, e] /= normalizer
 
-            diffusions = cholesky_diffusion(diffusions_sqrd, epsilon=1E-12)
+            diffusions = cholesky_diffusion(diffusions_sqrd, epsilon=1E-6)
 
         self.drifts = drifts
         self.diffs_squared = diffusions_sqrd
@@ -436,7 +464,7 @@ class NonparametricDPE:
 
         return intersector[0]
 
-    def markov_distributions(self):
+    def markov_check(self):
         """Finds the conditional distributions corresponding to the random sets.
 
         Currently pretty slow...
