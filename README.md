@@ -9,7 +9,9 @@ Alpha stage.
 
 Basically you throw in time series data and out comes the drift vector and noise matrix of a multivariate diffusion process of type
 
-dX_t = f(X_t) dt + g(X_t) dW_t
+dX_t = f(X_t) dt + g(X_t) dW_t.
+
+Includes a few useful methods, such as a Markov Property check and higher Kramers-Moyal coefficients.
 
 A couple of useful functions are the (Cython
 optimized) 'crosscorrelate' function, which does cross-
