@@ -5,9 +5,13 @@ Nonparametric time series modeling.
 
 Fit multivariate data to a diffusion process.
 
-Pre-alpha stage.
+Alpha stage.
 
-Currently the only useful functions are the (Cython
+Basically you throw in time series data and out comes the drift vector and noise matrix of a multivariate diffusion process of type
+
+dX_t = f(X_t) dt + g(X_t) dW_t
+
+A couple of useful functions are the (Cython
 optimized) 'crosscorrelate' function, which does cross-
 correlation (with lag) between two Pandas time series,
 and 'binner' which estimates the drift and diffusion
